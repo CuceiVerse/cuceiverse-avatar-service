@@ -5,7 +5,7 @@ Una web lista para correr (con Docker) que:
 - Permite **construir el avatar manualmente** (selección por categorías y colores).
 - Renderiza el avatar llamando a un **Nitro Imager** local (server-side) y devuelve PNG/GIF.
 
-> Nota legal: los assets de Habbo/Nitro pueden estar sujetos a copyright/licencias. Usa este proyecto sólo con assets que tengas derecho a usar.
+> Nota legal: los assets de Habbo/Nitro pueden estar sujetos a copyright/licencias.Este proyecto es sin fines de lucro.
 
 ## Qué incluye
 
