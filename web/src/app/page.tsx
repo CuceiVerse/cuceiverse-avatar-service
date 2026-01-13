@@ -88,6 +88,132 @@ function buildRenderUrl(figure: string, opts?: {
   return `/api/render?${sp.toString()}`;
 }
 
+function AvatarGif({
+  figure,
+  direction,
+  previewKey,
+  startLoad,
+  onLoaded,
+}: {
+  figure: string;
+  direction: number;
+  previewKey: number;
+  startLoad: boolean;
+  onLoaded: () => void;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!startLoad) {
+      setSrc(null);
+      return;
+    }
+    const url = buildRenderUrl(figure, {
+      action: "std",
+      direction: direction.toString(),
+      headDirection: direction.toString(),
+      format: "png",
+      size: "n",
+    });
+    // Add unique per-request salt to bypass ALL caches
+    const fullUrl = `${url}&t=${previewKey}&_uid=${Math.random()}`;
+
+    console.log(`[AvatarGif] Loading dir ${direction} for figure:`, figure);
+
+    // Create an image to preload
+    const img = new Image();
+    img.src = fullUrl;
+    img.onload = () => {
+      setSrc(fullUrl);
+      onLoaded();
+    };
+    img.onerror = () => {
+      onLoaded();
+    };
+  }, [figure, direction, previewKey, startLoad, onLoaded]);
+
+  return (
+    <div className="movementItem">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={`walk-${direction}`} />
+      ) : (
+        <div className="spinner">...</div>
+      )}
+    </div>
+  );
+}
+
+function SequentialGrid({ figure, previewKey, onReload, mainImageLoaded }: { figure: string, previewKey: number, onReload: () => void, mainImageLoaded: boolean }) {
+  const directions = [2, 4, 0, 6, 1, 3, 5, 7];
+  const [loadedCount, setLoadedCount] = useState(0);
+  const [isDebouncing, setIsDebouncing] = useState(false);
+
+  // Reset loading whenever figure or manual reload key changes
+  useEffect(() => {
+    // 1. Immediately block loading (clear everything)
+    setIsDebouncing(true);
+    setLoadedCount(0); // Reset counter
+
+    // 2. Wait 800ms before allowing load to start
+    const timer = setTimeout(() => {
+      setIsDebouncing(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [figure, previewKey]);
+
+  // Handle start condition based on main image
+  useEffect(() => {
+    // If not loaded, we stay debouncing/blocked
+    if (!mainImageLoaded) {
+      setIsDebouncing(true);
+      return;
+    }
+    // Once loaded, we give a small grace period then start
+    const timer = setTimeout(() => {
+      setIsDebouncing(false);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [mainImageLoaded]);
+
+  return (
+    <div className="movementGridWrapper">
+      <div className="movementHeader">
+        <div className="smallNote">Vistas previas (secuencial)</div>
+        <button className="pillButton" onClick={onReload}>
+          Recargar
+        </button>
+      </div>
+      <div className="movementGrid">
+        {directions.map((dir, index) => (
+          <AvatarGif
+            key={`${dir}-${figure}-${previewKey}`}
+            figure={figure}
+            previewKey={previewKey}
+            direction={dir}
+            // Start load ONLY if not debouncing AND it's our turn
+            startLoad={!isDebouncing && index <= loadedCount}
+            onLoaded={() => {
+              // Only increment if we are the current one loading
+              if (!isDebouncing && index === loadedCount) {
+                setLoadedCount(prev => prev + 1);
+              }
+            }}
+          />
+        ))}
+      </div>
+      <div className="smallNote">
+        {isDebouncing
+          ? (mainImageLoaded ? "Sincronizando..." : "Esperando al avatar...")
+          : loadedCount < directions.length
+            ? `Cargando ${loadedCount + 1}/${directions.length}...`
+            : "Listo"}
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const [gender, setGender] = useState<Gender>("M");
   const [setTypes, setSetTypes] = useState<SetTypeInfo[]>([]);
@@ -98,15 +224,28 @@ export default function Page() {
   const [activeType, setActiveType] = useState<string | null>(null);
   const [activeColorSlot, setActiveColorSlot] = useState(0);
   const [showPreviews, setShowPreviews] = useState(true);
+  const [showMovementPreviews, setShowMovementPreviews] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
   const [loadingActive, setLoadingActive] = useState(false);
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
 
   const setTypeMap = useMemo(() => new Map(setTypes.map((s) => [s.type, s])), [setTypes]);
   const figure = useMemo(() => buildFigureString(parts), [parts]);
 
-  const renderUrl = useMemo(() => (figure ? buildRenderUrl(figure, { size: "n" }) : ""), [figure]);
+  const renderUrl = useMemo(() => (
+    figure ? `${buildRenderUrl(figure, { size: "n" })}&t=${previewKey}` : ""
+  ), [figure, previewKey]);
+
   const gifUrl = useMemo(() => (
-    figure ? buildRenderUrl(figure, { format: "gif", action: "wlk", size: "n" }) : ""
-  ), [figure]);
+    figure ? `${buildRenderUrl(figure, { format: "gif", action: "wlk", size: "n" })}&t=${previewKey}` : ""
+  ), [figure, previewKey]);
+
+  // Sync previewKey with figure changes to ensure main image updates
+  // Sync previewKey with figure changes to ensure main image updates
+  useEffect(() => {
+    setPreviewKey(Date.now());
+    setMainImageLoaded(false); // Reset loaded state
+  }, [figure]);
 
   useEffect(() => {
     (async () => {
@@ -208,32 +347,7 @@ export default function Page() {
     })().catch(console.error);
   }, [setTypes, gender, setTypeMap, ensureSets, ensurePalette, setsByType, paletteById]);
 
-  const canRandomize = setTypes.length > 0;
 
-  async function handleRandomize() {
-    const localSets: SetCache = { ...setsByType };
-    const localPal: PaletteCache = { ...paletteById };
-
-    for (const t of visibleTypes) {
-      const st = setTypeMap.get(t);
-      if (!st) continue;
-      if (!localSets[t]) localSets[t] = await ensureSets(t);
-      if (st.paletteId != null && !localPal[st.paletteId]) localPal[st.paletteId] = await ensurePalette(st.paletteId);
-    }
-
-    setSetsByType(localSets);
-    setPaletteById(localPal);
-
-    setParts(() =>
-      randomAvatar({
-        gender,
-        setTypes,
-        setsByType: localSets,
-        paletteById: localPal,
-        preferredTypes: visibleTypes,
-      })
-    );
-  }
 
   function updatePart(type: string, patch: Partial<FigurePart>) {
     setParts((prev) => {
@@ -262,10 +376,29 @@ export default function Page() {
   const colorsCount = currentSet?.colorsCount ?? 1;
   const defaultColorId = paletteSelectable[0]?.id ?? 0;
   const normalizedColors = normalizeColors(activePart?.colors ?? [], colorsCount, defaultColorId);
-  const baseParts = useMemo(
-    () => (activeType ? parts.filter((p) => p.type !== activeType) : parts),
-    [parts, activeType]
-  );
+  /* 
+    OPTIMIZATION: Request Storm Prevention
+    We debounce the calculation of the "base parts" used for the item grid previews.
+    This ensures that while the user is rapidly clicking or randomizing, we DO NOT 
+    request 50+ images from the server. We wait for 1 second of silence.
+  */
+  const [delayedBaseParts, setDelayedBaseParts] = useState(parts);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Only update the grid previews if we are idle for 1s
+      if (activeType) {
+        setDelayedBaseParts(parts.filter((p) => p.type !== activeType));
+      } else {
+        setDelayedBaseParts(parts);
+      }
+    }, 3000); // 3 seconds delay for safety
+    return () => clearTimeout(timer);
+  }, [parts, activeType]);
+
+  // Use the DELAYED parts for the grid to avoid DDOSing ourselves
+  // Note: baseParts from before was 'memoized' but immediate. Now we use state.
+  const basePartsForGrid = delayedBaseParts;
 
   useEffect(() => {
     if (colorsCount < 2 && activeColorSlot !== 0) setActiveColorSlot(0);
@@ -311,22 +444,30 @@ export default function Page() {
               <option value="U">U</option>
             </select>
           </div>
-          <button className="primary" onClick={handleRandomize} disabled={!canRandomize}>
-            Aleatorio
-          </button>
+
         </div>
       </header>
 
       <div className="appShell">
         <aside className="panel previewPanel">
           <div>
-          <div className="panelTitle">Vista previa</div>
-          <div className="smallNote">Render local con Nitro Imager.</div>
+            <div className="panelTitle">Vista previa</div>
           </div>
           <div className="avatarFrame">
             {figure ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={renderUrl} alt="avatar" />
+              <img
+                src={renderUrl}
+                alt="avatar"
+                onLoad={() => {
+                  console.log("[Page] Main image loaded");
+                  setMainImageLoaded(true);
+                }}
+                onError={() => {
+                  // If it fails, we still unblock so the rest can try
+                  setMainImageLoaded(true);
+                }}
+              />
             ) : (
               <div className="avatarHint">Cargando...</div>
             )}
@@ -345,21 +486,28 @@ export default function Page() {
                 </a>
               ) : null}
             </div>
-            <div>
+            {/* <div>
               <div className="smallNote">Figure string</div>
               <div className="figureBlock">{figure || "(vacio)"}</div>
-            </div>
+            </div> */}
             <div className="row">
-              <button onClick={() => navigator.clipboard.writeText(figure)} disabled={!figure}>
-                Copiar figure
-              </button>
-              <button onClick={() => setShowAll((v) => !v)}>
-                {showAll ? "Ocultar extra" : "Mostrar todo"}
+              <button
+                className={showMovementPreviews ? "primary" : ""}
+                onClick={() => setShowMovementPreviews((v) => !v)}
+                disabled={!figure}
+              >
+                {showMovementPreviews ? "Ocultar previa" : "Mostrar previa"}
               </button>
             </div>
-            <div className="smallNote">
-              Si el imager falla, revisa que ./data tenga assets y que Docker haya terminado de clonar/compilar.
-            </div>
+
+            {showMovementPreviews && figure ? (
+              <SequentialGrid
+                figure={figure}
+                previewKey={previewKey}
+                onReload={() => setPreviewKey(Date.now())}
+                mainImageLoaded={mainImageLoaded}
+              />
+            ) : null}
           </div>
         </aside>
 
@@ -425,7 +573,7 @@ export default function Page() {
                   const isActive = activePart?.setId === set.id;
                   const colors = isActive ? normalizedColors : getDefaultColors(set, paletteSelectable);
                   const previewFigure = showPreviews && activeType
-                    ? buildFigureWithOverride(baseParts, activeType, set.id, colors)
+                    ? buildFigureWithOverride(basePartsForGrid, activeType, set.id, colors)
                     : "";
                   const previewUrl = previewFigure ? buildRenderUrl(previewFigure, { size: "n" }) : "";
                   const club = clubLabel(set.club);

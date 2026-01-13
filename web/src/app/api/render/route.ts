@@ -23,8 +23,8 @@ export async function GET(req: Request) {
   if (!target.searchParams.get("head_direction")) target.searchParams.set("head_direction", target.searchParams.get("direction")!);
 
   const res = await fetch(target.toString(), {
-    // The imager is a local service; we can cache aggressively at the edge/server.
-    cache: "force-cache",
+    // Disable cache to prevent ghost items/stale renders
+    cache: "no-store",
   });
 
   if (!res.ok) {
