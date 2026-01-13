@@ -94,8 +94,8 @@ ENV AVATAR_ASSET_URL=/data/assets/%libname%.nitro
 
 # Web Configuration
 ENV PORT=3000
-# Important: Internal URL points to localhost because they share the container
-ENV IMAGER_INTERNAL_URL=http://localhost:3030
+# Important: Internal URL uses 127.0.0.1 to force IPv4 (avoids ::1 connection errors)
+ENV IMAGER_INTERNAL_URL=http://127.0.0.1:3030
 ENV FIGUREDATA_PATH=/data/nitro-assets/gamedata/json/FigureData.json
 
 EXPOSE 3000

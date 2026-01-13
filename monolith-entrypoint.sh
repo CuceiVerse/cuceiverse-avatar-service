@@ -11,7 +11,7 @@ node dist/index.js &
 IMAGER_PID=$!
 
 # Wait a few seconds for Imager to potentially crash or start
-sleep 5
+sleep 10
 
 if ! kill -0 $IMAGER_PID > /dev/null 2>&1; then
     echo "[Monolith] CRITICAL: Imager process died immediately."
