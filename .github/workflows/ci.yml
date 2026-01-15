@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  avatar-service:
-    name: avatar-service (lint/smoke)
+  avatar_web:
+    name: avatar-service web (lint/build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -21,34 +21,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
-          cache: pip
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
-      - name: Install dependencies
+      - name: Install (web)
+        working-directory: web
+        run: npm ci
+
+      - name: Validate required scripts (web)
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          elif [ -f pyproject.toml ]; then
-            pip install -e .
-          else
-            echo "No requirements.txt or pyproject.toml found. Installing lint deps only."
-          fi
-          pip install ruff pytest
+          node -e "const s=require('./web/package.json').scripts||{}; ['lint','build'].forEach(k=>{if(!s[k]){console.error('Missing npm script in web/package.json: '+k); process.exit(1)}})"
 
-      - name: Smoke check (compile)
-        run: python -m compileall .
+      - name: Lint (web)
+        working-directory: web
+        run: npm run lint
 
-      - name: Lint (ruff basic)
-        run: ruff check . --select E,F
-
-      - name: Tests (if present)
-        run: |
-          if [ -d tests ] || [ -d test ]; then
-            pytest -q
-          else
-            echo "No tests directory found; skipping."
-          fi
+      - name: Build (web)
+        working-directory: web
+        run: npm run
