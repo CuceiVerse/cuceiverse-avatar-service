@@ -43,3 +43,12 @@ jobs:
       - name: Build (web)
         working-directory: web
         run: npm run build
+
+      - name: "Guard: prevent committed node_modules"
+        run: |
+          if git ls-files | grep -E '^(web/)?node_modules/'; then
+            echo "ERROR: node_modules is tracked. Remove it from git index and rely on .gitignore."
+            exit 1
+          fi
+          echo "OK: node_modules not tracked"
+
