@@ -3,11 +3,11 @@ set -e
 
 echo "[Monolith] Starting services..."
 
-# 1. Start Imager in background (Limit heap to 200MB)
+# 1. Start Imager in background
 # We redirect logs to ensure we see errors
 echo "[Monolith] Launching Nitro Imager (Internal Port 3030)..."
 cd /app/imager
-NODE_OPTIONS="--max-old-space-size=200" node dist/index.js &
+node dist/index.js &
 IMAGER_PID=$!
 
 # Wait a few seconds for Imager to potentially crash or start
@@ -20,7 +20,7 @@ fi
 
 echo "[Monolith] Imager running (PID $IMAGER_PID)."
 
-# 2. Start Web in foreground (Limit heap to 250MB)
+# 2. Start Web in foreground
 echo "[Monolith] Launching Next.js Web (Port 3000)..."
 cd /app/web
-NODE_OPTIONS="--max-old-space-size=250" exec npm start
+exec npm start

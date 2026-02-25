@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Habbo/Nitro Avatar Generator",
+  title: "Creador de Avatar",
   description: "Random + manual Habbo-style avatar builder using Nitro Imager.",
 };
 

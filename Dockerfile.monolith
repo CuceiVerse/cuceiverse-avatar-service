@@ -2,7 +2,7 @@
 # Stage 1: Asset Downloader
 # ==========================================
 FROM alpine:3.18 AS assets
-RUN apk add --no-cache git bash coreutils findutils
+RUN apk add --no-cache git bash coreutils findutils nodejs npm
 
 # Environment for Assets
 ARG ASSETS_REPO=https://github.com/sphynxkitten/nitro-assets.git
@@ -10,6 +10,7 @@ ARG ASSETS_BRANCH=master
 
 WORKDIR /assets-init
 COPY assets-init/init.sh .
+COPY assets-init/optimize.js .
 RUN chmod +x init.sh
 
 # Run the download script. It populates /data

@@ -424,7 +424,7 @@ export default function Page() {
     <div className="container">
       <header className="appHeader">
         <div className="titleBlock">
-          <h1>Habbo/Nitro Avatar Generator</h1>
+          <h1>Creador de Avatar</h1>
           <p>Personaliza tu avatar con items, colores y ajustes rapidos.</p>
         </div>
         <div className="headerControls">
@@ -439,9 +439,8 @@ export default function Page() {
                 setParts([]);
               }}
             >
-              <option value="M">M</option>
-              <option value="F">F</option>
-              <option value="U">U</option>
+              <option value="M">Masculino</option>
+              <option value="F">Femenino</option>
             </select>
           </div>
 
@@ -474,18 +473,7 @@ export default function Page() {
           </div>
 
           <div className="actionsRow">
-            <div className="row">
-              {figure ? (
-                <a className="pillButton" href={renderUrl} target="_blank" rel="noreferrer">
-                  Abrir PNG
-                </a>
-              ) : null}
-              {figure ? (
-                <a className="pillButton" href={gifUrl} target="_blank" rel="noreferrer">
-                  Abrir GIF
-                </a>
-              ) : null}
-            </div>
+            {/* Botones de Abrir PNG/GIF removidos */}
             {/* <div>
               <div className="smallNote">Figure string</div>
               <div className="figureBlock">{figure || "(vacio)"}</div>

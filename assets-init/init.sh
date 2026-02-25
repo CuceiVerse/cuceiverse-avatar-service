@@ -63,6 +63,12 @@ if [ -f "/data/nitro-assets/effects/json/EffectMap.json" ]; then
 fi
 
 # ------------------------------------------------------------------
+# Optimizar Assets
+# ------------------------------------------------------------------
+echo "[assets-init] Optimizando assets (Reduciendo a 40 items por categoría)..."
+node /assets-init/optimize.js
+
+# ------------------------------------------------------------------
 # Resumen
 # ------------------------------------------------------------------
 echo "[assets-init] Listo."
