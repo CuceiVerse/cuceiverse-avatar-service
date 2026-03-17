@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const MAX_ITEMS = 40;
-const gamedataPath = '/data/nitro-assets/gamedata/json';
-const assetsPath = '/data/assets';
+const gamedataPath = path.join(__dirname, '..', 'data', 'nitro-assets', 'gamedata', 'json');
+const assetsPath = path.join(__dirname, '..', 'data', 'assets');
 
 console.log(`[Optimizer] Starting... Max items per category: ${MAX_ITEMS}`);
 

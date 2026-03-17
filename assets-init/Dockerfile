@@ -3,5 +3,5 @@ RUN apk add --no-cache git bash coreutils findutils nodejs npm
 WORKDIR /assets-init
 COPY init.sh .
 COPY optimize.js .
-RUN chmod +x init.sh
+RUN sed -i 's/\r$//' init.sh && chmod +x init.sh
 ENTRYPOINT ["./init.sh"]

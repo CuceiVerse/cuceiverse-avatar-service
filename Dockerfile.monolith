@@ -11,7 +11,7 @@ ARG ASSETS_BRANCH=master
 WORKDIR /assets-init
 COPY assets-init/init.sh .
 COPY assets-init/optimize.js .
-RUN chmod +x init.sh
+RUN sed -i 's/\r$//' init.sh && chmod +x init.sh
 
 # Run the download script. It populates /data
 RUN ./init.sh
@@ -78,7 +78,7 @@ COPY --from=web-build /app/web/package.json /app/web/package.json
 
 # 4. Entrypoint Script
 COPY monolith-entrypoint.sh /app/monolith-entrypoint.sh
-RUN chmod +x /app/monolith-entrypoint.sh
+RUN sed -i 's/\r$//' /app/monolith-entrypoint.sh && chmod +x /app/monolith-entrypoint.sh
 
 # Environment Variables
 ENV NODE_ENV=production
