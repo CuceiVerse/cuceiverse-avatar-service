@@ -104,7 +104,8 @@ export async function getSetTypes(): Promise<SetTypeInfo[]> {
       ? toInt(pick(st, ["paletteid", "paletteId", "palette"]))
       : null;
 
-    const mandatory = toBool(pick(st, ["mandatory", "isMandatory"])) || toInt(pick(st, ["mandatory"])) === 1;
+    const mandatory = toBool(pick(st, ["mandatory", "isMandatory"])) || 
+                      Object.keys(st).some(k => k.startsWith("mandatory_") && toBool(st[k]));
 
     out.push({ type, paletteId, mandatory });
   }

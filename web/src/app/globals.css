@@ -609,3 +609,31 @@ button.ghost {
     grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   }
 }
+
+.emptyCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.setTile[data-active="true"] .emptyCircle {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(28, 134, 238, 0.05);
+  opacity: 1;
+}
+
+.setTile:hover .emptyCircle {
+  opacity: 1;
+  transform: scale(1.05);
+  border-color: var(--accent);
+  color: var(--accent);
+}
