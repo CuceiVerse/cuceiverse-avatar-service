@@ -7,6 +7,21 @@ import { Application } from '../../../Application';
 import { AvatarScaleType, IAvatarImage } from '../../../avatar';
 import { BuildFigureOptionsRequest, BuildFigureOptionsStringRequest, ProcessActionRequest, ProcessDanceRequest, ProcessDirectionRequest, ProcessEffectRequest, ProcessGestureRequest, RequestQuery } from './utils';
 
+const cache = new Map<string, { buffer: Buffer, contentType: string }>();
+const MAX_CACHE_SIZE = 1000;
+
+function getFromCache(key: string) {
+    return cache.get(key);
+}
+
+function addToCache(key: string, buffer: Buffer, contentType: string) {
+    if (cache.size >= MAX_CACHE_SIZE) {
+        const firstKey = cache.keys().next().value;
+        if (firstKey !== undefined) cache.delete(firstKey);
+    }
+    cache.set(key, { buffer, contentType });
+}
+
 export const HabboImagingRouterGet = async (request: Request<any, any, any, RequestQuery>, response: Response) =>
 {
     const query = request.query;
@@ -17,17 +32,28 @@ export const HabboImagingRouterGet = async (request: Request<any, any, any, Requ
         const saveDirectory = (process.env.AVATAR_SAVE_PATH as string);
         const directory = FileUtilities.getDirectory(saveDirectory);
         const avatarString = BuildFigureOptionsStringRequest(buildOptions);
+        const contentType = ((buildOptions.imageFormat === 'gif') ? 'image/gif' : 'image/png');
+
+        // 1. Check Memory Cache
+        const cached = getFromCache(avatarString);
+        if (cached) {
+            response.writeHead(200, { 'Content-Type': cached.contentType }).end(cached.buffer);
+            return;
+        }
+
         const saveFile = new File(`${ directory.path }/${ avatarString }.${ buildOptions.imageFormat }`);
 
+        // 2. Check Disk Cache
         if(saveFile.exists())
         {
             const buffer = await FileUtilities.readFileAsBuffer(saveFile.path);
 
             if(buffer)
             {
+                addToCache(avatarString, buffer, contentType);
                 response
                     .writeHead(200, {
-                        'Content-Type': ((buildOptions.imageFormat === 'gif') ? 'image/gif' : 'image/png')
+                        'Content-Type': contentType
                     })
                     .end(buffer);
             }
@@ -136,6 +162,7 @@ export const HabboImagingRouterGet = async (request: Request<any, any, any, Requ
             {
                 const buffer = tempCanvas.toBuffer('image/png');
 
+                addToCache(avatarString, buffer, contentType);
                 response
                     .writeHead(200, {
                         'Content-Type': 'image/png'
@@ -160,6 +187,8 @@ export const HabboImagingRouterGet = async (request: Request<any, any, any, Requ
         }
 
         const buffer = await FileUtilities.readFileAsBuffer(saveFile.path);
+
+        if (buffer) addToCache(avatarString, buffer, contentType);
 
         response
             .writeHead(200, {
